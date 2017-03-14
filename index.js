@@ -22,13 +22,17 @@ class Promise {
     /*
         遵循Promise/A+ 规范，then方法 onResolved 或者 onRejected 返回一个值 x,
         然后x又必须经过resolve，所以这里参数直接命名为x
+
+        当then方法返回一个promise对象x时，令这个x为promise3，
+        需要将promise3的resolve的值作为promise2的data resolve掉
      */
     resolve(x) {
         const promise = this
+        // console.log('x:', x)
         if (promise.state === PENDING) {
             promise.state = RESOLVED
             promise.data = x
-            this.notify()
+            promise.notify()
         }
     }
 
@@ -36,7 +40,7 @@ class Promise {
         const promise = this
         promise.state = REJECTED
         promise.data = reason
-        this.notify()
+        promise.notify()
     }
 
     then(onResolved, onRejected) {
@@ -90,14 +94,17 @@ class Promise {
          */
         setTimeout(() => {
             while (promise.defered.length) {
-                const next = promise.defered.shift(),
-                    onResolved = next[0],
-                    onRejected = next[1],
-                    resolve = next[2],
-                    reject = next[3]
+                const next = promise.defered.shift()
+                const onResolved = next[0]
+                const onRejected = next[1]
+                const resolve = next[2]
+                const reject = next[3]
 
                 if (promise.state === RESOLVED) {
-                    resolve(onResolved(promise.data))
+                    console.log(promise.data)
+                    const x = onResolved(promise.data)
+                    console.log('x:', x)
+                    // resolve(onResolved.call(undefined, promise.data))
                 }
 
                 if (promise.state === REJECTED) {
@@ -113,8 +120,11 @@ new Promise((resolve, reject) => {
         resolve(1)
     }, 1000)
 }).then((value) => {
+    // return value + '么么哒'
     return new Promise((resolve, reject) => {
-        resolve(value + '么么哒')
+        setTimeout(() => {
+            resolve(value + '么么哒')
+        })
     })
 }).then((value) => {
     console.log(value)
