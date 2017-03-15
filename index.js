@@ -3,9 +3,9 @@
  */
 'use strict'
 
-const PENDING = 0
-const RESOLVED = 1
-const REJECTED = 2
+const PENDING = 'PENDING'
+const RESOLVED = 'RESOLVED'
+const REJECTED = 'REJECTED'
 
 class Promise {
     constructor(executor) {
@@ -28,8 +28,25 @@ class Promise {
      */
     resolve(x) {
         const promise = this
-        // console.log('x:', x)
         if (promise.state === PENDING) {
+
+            const then = x && x['then']
+            if (x !== null && typeof x === 'object' && typeof x.then === 'function') {
+                /*
+                    当x为promise对象时,其实这里已经是then方法里返回的promise2的resolve了
+                    此时promise2要拿到promise3的resolve出来的值作为自己的data来resolve出去，
+                    那什么时候能拿到一个promise对象resolve后的data呢？当然是在这个promise对象的then方法里了~
+                    所以直接执行promise3的then方法，此时的参数y就是promise3 resolve后的data，
+                    在promise3的onResolved方法里执行promise2的resolve
+                 */
+                then.call(x, function(y) {
+                    promise.resolve(y)
+                }, function(r) {
+                    promise.reject(r)
+                })
+                return
+            }
+
             promise.state = RESOLVED
             promise.data = x
             promise.notify()
@@ -90,7 +107,7 @@ class Promise {
         /*
             使用setTimeout是在promise1同步resolve时，直接调用notify，而此时then方法还未执行，
             还没把onResolved, onRejected都push到defered里去。
-            这里其实是个nextTick操作
+            这里其实是个使用nextTick来达成的同步异步的统一性
          */
         setTimeout(() => {
             while (promise.defered.length) {
@@ -100,10 +117,17 @@ class Promise {
                 const resolve = next[2]
                 const reject = next[3]
 
+                //这里的resolve/reject都是处理promise2的
+                //和promise1不同的是，promise1的resolve在业务代码里执行，promise2的resolve在promise内部执行
                 if (promise.state === RESOLVED) {
-                    console.log(promise.data)
-                    const x = onResolved(promise.data)
-                    console.log('x:', x)
+                    if (typeof onResolved === 'function') {
+                        const x = onResolved(promise.data)
+                        resolve(x)
+                    } else {
+                        //值穿透处理，如果onResolved/onRejected 不是函数，则将当前promise.data作为then返回的promise2的data进行传递
+                        resolve(promise.data)
+                    }
+
                     // resolve(onResolved.call(undefined, promise.data))
                 }
 
@@ -120,11 +144,12 @@ new Promise((resolve, reject) => {
         resolve(1)
     }, 1000)
 }).then((value) => {
-    // return value + '么么哒'
     return new Promise((resolve, reject) => {
         setTimeout(() => {
             resolve(value + '么么哒')
         })
+    }).then((value) => {
+        return 'heheda'
     })
 }).then((value) => {
     console.log(value)
