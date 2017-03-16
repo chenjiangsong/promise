@@ -153,7 +153,6 @@ class Promise {
              */
             if (promise.state !== PENDING) {
                 while (promise.defered.length) {
-                    console.log('promise.defered.length: ', promise.defered.length)
                     const next = promise.defered.shift()
                     const onResolved = next[0]
                     const onRejected = next[1]
@@ -204,42 +203,59 @@ Promise.reject = function(reason) {
     释放一个对应的data数组给then调用
 
     首先Promise.all有then方法，所以肯定返回一个promise对象，然后在executor函数里循环遍历promise数组，
-    将每个promise resolve的值存起来，再
+    将每个promise resolve的值存到数组里，再resolve这个数组
+    同样的原理，处理内部promise的resolve/reject后的值，都要调用内部promise的then方法
  */
 Promise.all = function(iterable) {
-    return new Promise((resolve, reject) => {
+    return new Promise(function(resolve, reject)  {
+        const len = iterable.length
+        let count = 0,
+            result = []
+
+        if (iterable.length === 0) {
+            resolve(result)
+        }
+
+        iterable.map((promise, index) => {
+            promise.then((v) => {
+                count++
+                result[index] = v
+                if (count === len) {
+                    resolve(result)
+                }
+            },reject)
+        })
+    })
+}
+/*
+    获取最慢的promise
+ */
+Promise.slow = function(iterable) {
+    return new Promise(function(resolve, reject) {
         const len = iterable.length
         let count = 0
-            result = []
+
+        iterable.map((promise) => {
+            promise.then((v) => {
+                count++
+                if (count === len) {
+                    resolve(v)
+                }
+            },reject)
+        })
 
     })
 }
-// new Promise((resolve, reject) => {
-//     setTimeout(() => {
-//         resolve(1)
-//     }, 1000)
-// }).then((value) => {
-//     return new Promise((resolve, reject) => {
-//         setTimeout(() => {
-//             resolve(value + '么么哒')
-//         })
-//     }).then((value) => {
-//         return 'heheda'
-//     })
-// }).then((value) => {
-//     console.log(value)
-// })
-
-const a = new Promise(function(resolve, reject) {
-
-}).then((value) => {
-    console.log(value)
-})
-
-a.then(() => {
-    console.log(2)
-})
-
-a.then(() => {
-    console.log(3)
-})
+/*
+    获取最快的promise，直接resolve第一个出来的就行了
+ */
+Promise.race = function(iterable) {
+    return new Promise(function(resolve, reject) {
+        const len = iterable.length
+        iterable.map((promise) => {
+            promise.then((v) => {
+                resolve(v)
+            }, reject)
+        })
+    })
+}
