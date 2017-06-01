@@ -216,7 +216,7 @@ Promise.all = function(iterable) {
             resolve(result)
         }
 
-        iterable.map((promise, index) => {
+        iterable.foreach((promise, index) => {
             promise.then((v) => {
                 count++
                 result[index] = v
@@ -235,7 +235,7 @@ Promise.slow = function(iterable) {
         const len = iterable.length
         let count = 0
 
-        iterable.map((promise) => {
+        iterable.foreach((promise) => {
             promise.then((v) => {
                 count++
                 if (count === len) {
@@ -252,7 +252,7 @@ Promise.slow = function(iterable) {
 Promise.race = function(iterable) {
     return new Promise(function(resolve, reject) {
         const len = iterable.length
-        iterable.map((promise) => {
+        iterable.foreach((promise) => {
             promise.then((v) => {
                 resolve(v)
             }, reject)
