@@ -122,8 +122,8 @@ class Promise {
                 而错误注解1那里的resolve处理的是promise1的状态
              */
             promise.defered.push([onResolved, onRejected, resolve, reject])
-            //下面这行可加可不加，只针对executor不resolve/reject时要不要执行then
-            //promise.notify()
+            // 防止异步then 手动notify
+            promise.notify()
         })
         return promise2
     }
